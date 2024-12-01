@@ -1,0 +1,79 @@
+#Scraping data from Skytrax
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+base_url = "https://www.airlinequality.com/airline-reviews/british-airways"
+pages = 10
+page_size = 100
+
+reviews = []
+
+# for i in range(1, pages + 1):
+for i in range(1, pages + 1):
+
+    print(f"Scraping page {i}")
+
+    # Create URL to collect links from paginated data
+    url = f"{base_url}/page/{i}/?sortby=post_date%3ADesc&pagesize={page_size}"
+
+    # Collect HTML data from this page
+    response = requests.get(url)
+
+    # Parse content
+    content = response.content
+    parsed_content = BeautifulSoup(content, 'html.parser')
+    for para in parsed_content.find_all("div", {"class": "text_content"}):
+        reviews.append(para.get_text())
+    
+    print(f"   ---> {len(reviews)} total reviews")
+
+df = pd.DataFrame()
+df["reviews"] = reviews
+df.head()
+
+#Sentiment Analysis 
+
+import pandas as pd
+from textblob import TextBlob
+
+df = pd.read_csv('/Users/BA DATA/BA_reviews.csv', encoding='ISO-8859-1') 
+
+print(df.head())
+
+df['sentiment'] = df['reviews'].apply(lambda x: TextBlob(str(x)).sentiment.polarity)
+
+def sentiment_label(polarity):
+    if polarity > 0:
+        return 'positive'
+    elif polarity < 0:
+        return 'negative'
+    else:
+        return 'neutral'
+
+df['sentiment_label'] = df['sentiment'].apply(sentiment_label)
+
+df.to_csv('/Users/BA DATA/sentiment_analysis_output.csv', index=False, encoding='ISO-8859-1')
+
+print("save to sentiment_analysis_output.csv")
+print(df[['reviews', 'sentiment', 'sentiment_label']].head())
+
+# word cloud
+import pandas as pd
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
+# Load your CSV file
+df = pd.read_csv('/Users/BA DATA/BA_reviews.csv',encoding='ISO-8859-1')
+
+# Combine all the text from the 'text' column into one large string
+text_data = ' '.join(df['reviews'].dropna())
+
+# Create a word cloud
+wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text_data)
+
+# Display the word cloud
+plt.figure(figsize=(10, 6))
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis('off')
+plt.show()
